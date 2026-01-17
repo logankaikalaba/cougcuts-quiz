@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Lead {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  name            String?
+  phone           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Quiz Data
+  hairType        String   // "curly", "straight", "coily", "wavy"
+  hairGoals       String[] // Array of goals
+  quizAnswers     Json     // Full quiz response object
+
+  // Generated Content
+  routineGenerated Boolean  @default(false)
+  routinePdfUrl   String?
+  routineText     String?  @db.Text
+  profileId       String   // Unique profile identifier
+
+  // Marketing
+  emailSequenceStarted Boolean @default(false)
+  emailsOpened         Int     @default(0)
+  pdfDownloaded        Boolean @default(false)
+  booked               Boolean @default(false)
+  bookingDate          DateTime?
+
+  // Attribution
+  source          String?  // "instagram", "tiktok", "flyer", etc.
+  referralCode    String?
+
+  // Segmentation
+  budgetTier      String   // "low", "mid", "premium"
+  lastEmailSent   DateTime?
+
+  // Relations
+  emailEvents     EmailEvent[]
+
+  @@index([email])
+  @@index([createdAt])
+  @@index([hairType])
+}
+
+model QuizSession {
+  id                String   @id @default(cuid())
+  sessionId         String   @unique
+  currentQuestion   Int      @default(1)
+  answers           Json
+  startedAt         DateTime @default(now())
+  completedAt       DateTime?
+  abandonedAt       DateTime?
+  completed         Boolean  @default(false)
+
+  // For tracking drop-off
+  lastQuestionViewed Int
+  timeOnQuestions    Json     // Time spent on each question
+
+  @@index([sessionId])
+  @@index([completed])
+}
+
+model EmailEvent {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id])
+  eventType String   // "sent", "opened", "clicked", "bounced"
+  emailType String   // "routine_delivery", "day_3_followup", etc.
+  timestamp DateTime @default(now())
+  metadata  Json?
+
+  @@index([leadId])
+  @@index([eventType])
+  @@index([timestamp])
+}
